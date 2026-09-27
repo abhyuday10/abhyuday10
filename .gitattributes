@@ -1,0 +1,3 @@
+scripts/** linguist-vendored
+fonts/** linguist-vendored
+assets/** linguist-generated
