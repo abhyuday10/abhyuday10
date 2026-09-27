@@ -18,7 +18,7 @@ jobs:
       - run: node scripts/build.mjs
         env:
           # PROFILE_TOKEN: a user token with read:user and repo, so private contributions and languages count.
-          GH_TOKEN: ${{ secrets.PROFILE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROFILE_TOKEN }}
       - name: commit if changed
         run: |
           git config user.name "github-actions[bot]"

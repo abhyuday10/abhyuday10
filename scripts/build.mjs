@@ -25,6 +25,8 @@ async function gh(url, init = {}) {
 // Contributions, last 365 days, private included when the token allows it.
 const to = new Date(); const from = new Date(to); from.setDate(from.getDate() - 364);
 const q = `{ viewer { contributionsCollection(from:"${from.toISOString()}", to:"${to.toISOString()}") { restrictedContributionsCount contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } } } } }`;
+const who = (await gh("https://api.github.com/graphql", { method: "POST", body: JSON.stringify({ query: "{ viewer { login } }" }) })).data.viewer.login;
+if (who !== LOGIN) throw new Error(`token belongs to ${who}, not ${LOGIN}; set the PROFILE_TOKEN secret to a user token with read:user and repo`);
 const cc = (await gh("https://api.github.com/graphql", { method: "POST", body: JSON.stringify({ query: q }) })).data.viewer.contributionsCollection;
 const days = cc.contributionCalendar.weeks.flatMap((w) => w.contributionDays);
 const total = cc.contributionCalendar.totalContributions;
