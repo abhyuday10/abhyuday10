@@ -24,13 +24,16 @@ async function gh(url, init = {}) {
 
 // Contributions, last 365 days, private included when the token allows it.
 const to = new Date(); const from = new Date(to); from.setDate(from.getDate() - 364);
-const q = `{ viewer { contributionsCollection(from:"${from.toISOString()}", to:"${to.toISOString()}") { restrictedContributionsCount contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } } } } }`;
+const q = `{ viewer { contributionsCollection(from:"${from.toISOString()}", to:"${to.toISOString()}") { restrictedContributionsCount contributionCalendar { totalContributions weeks { contributionDays { date contributionCount } } } commitContributionsByRepository(maxRepositories:100) { repository { isPrivate } contributions { totalCount } } } } }`;
 const who = (await gh("https://api.github.com/graphql", { method: "POST", body: JSON.stringify({ query: "{ viewer { login } }" }) })).data.viewer.login;
 if (who !== LOGIN) throw new Error(`token belongs to ${who}, not ${LOGIN}; set the PROFILE_TOKEN secret to a user token with read:user and repo`);
 const cc = (await gh("https://api.github.com/graphql", { method: "POST", body: JSON.stringify({ query: q }) })).data.viewer.contributionsCollection;
 const days = cc.contributionCalendar.weeks.flatMap((w) => w.contributionDays);
 const total = cc.contributionCalendar.totalContributions;
-const privatePct = Math.floor((100 * cc.restrictedContributionsCount) / Math.max(1, total));
+const byRepo = cc.commitContributionsByRepository;
+const commitsAll = byRepo.reduce((n, r) => n + r.contributions.totalCount, 0);
+const commitsPrivate = byRepo.filter((r) => r.repository.isPrivate).reduce((n, r) => n + r.contributions.totalCount, 0);
+const privatePct = Math.round((100 * (commitsPrivate + cc.restrictedContributionsCount)) / Math.max(1, commitsAll + cc.restrictedContributionsCount));
 const months = new Map();
 for (const d of days) months.set(d.date.slice(0, 7), (months.get(d.date.slice(0, 7)) ?? 0) + d.contributionCount);
 const monthVals = [...months.values()];
@@ -96,6 +99,6 @@ function card(file, title, sub, num, numLabel) {
 <text x="${w - 24}" y="96" ${mono} font-size="11" fill="${G.cyan}" text-anchor="end">read the writeup →</text>
 </svg>`);
 }
-card("card-pokemon.svg", "One Recipe, Many Experts", "Pokémon TCG · entity transformer · self-play", "top 2.3%", "of 6,807 teams");
-card("card-orbit.svg", "A first-time RL practitioner's experience", "Orbit Wars · self-play · one rented GPU, ~$100", "60th", "of 4,729 teams");
+card("card-pokemon.svg", "A Pokémon bot that beat a Worlds finalist", "One Recipe, Many Experts · entity transformer · self-play", "top 2.3%", "of 6,807 teams");
+card("card-orbit.svg", "Self-play RL from scratch on $100 of GPU", "Orbit Wars · real-time strategy · my first RL agent", "60th", "of 4,729 teams");
 console.log(`built: ${total} contributions, ${privatePct}% private, languages ${topLangs.map((l) => l[0]).join(", ")}`);
